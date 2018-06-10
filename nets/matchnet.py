@@ -10,14 +10,20 @@ slim = tf.contrib.slim
 def matchnet(inputs,
              support_labels,
              num_classes,
+             fc_num=0,
              fce=True,
              batch_size=32,
              processing_steps=10,
              scope='MatchNet'):
 
-    end_points = {}
-
     with tf.variable_scope(scope, 'MatchNet', [inputs, support_labels]):
+        end_points = {}
+        with tf.variable_scope('FC'):
+            for i in range(fc_num):
+                inputs = slim.fully_connected(inputs, num_classes,
+                                              activation_fn=tf.nn.relu, scope='fc_%d' % i)
+                end_points['fc_%d' % i] = inputs
+
         features = tf.unstack(inputs, axis=1)
         targets = features[0]
         support_features = features[1:]

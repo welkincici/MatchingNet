@@ -12,45 +12,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # ==============================================================================
-r"""Saves out a GraphDef containing the architecture of the model.
-
-To use it, run something like this, with a model name defined by slim:
-
-bazel build tensorflow_models/research/slim:export_inference_graph
-bazel-bin/tensorflow_models/research/slim/export_inference_graph \
---model_name=inception_v3 --output_file=/tmp/inception_v3_inf_graph.pb
-
-If you then want to use the resulting model with your own or pretrained
-checkpoints as part of a mobile model, you can run freeze_graph to get a graph
-def with the variables inlined as constants using:
-
-bazel build tensorflow/python/tools:freeze_graph
-bazel-bin/tensorflow/python/tools/freeze_graph \
---input_graph=/tmp/inception_v3_inf_graph.pb \
---input_checkpoint=/tmp/checkpoints/inception_v3.ckpt \
---input_binary=true --output_graph=/tmp/frozen_inception_v3.pb \
---output_node_names=InceptionV3/Predictions/Reshape_1
-
-The output node names will vary depending on the model, but you can inspect and
-estimate them using the summarize_graph tool:
-
-bazel build tensorflow/tools/graph_transforms:summarize_graph
-bazel-bin/tensorflow/tools/graph_transforms/summarize_graph \
---in_graph=/tmp/inception_v3_inf_graph.pb
-
-To run the resulting graph in C++, you can look at the label_image sample code:
-
-bazel build tensorflow/examples/label_image:label_image
-bazel-bin/tensorflow/examples/label_image/label_image \
---image=${HOME}/Pictures/flowers.jpg \
---input_layer=input \
---output_layer=InceptionV3/Predictions/Reshape_1 \
---graph=/tmp/frozen_inception_v3.pb \
---labels=/tmp/imagenet_slim_labels.txt \
---input_mean=0 \
---input_std=255
-
-"""
 
 from __future__ import absolute_import
 from __future__ import division
@@ -68,13 +29,22 @@ tf.app.flags.DEFINE_boolean(
     'is_training', False,
     'Whether to save out a training-focused version of the model.')
 
-tf.app.flags.DEFINE_integer(
-    'batch_size', None,
-    'Batch size for the exported model. Defaulted to "None" so batch size can '
-    'be specified at model runtime.')
+tf.app.flags.DEFINE_string('output_file', None, 'Where to save the resulting file to.')
 
-tf.app.flags.DEFINE_string(
-    'output_file', None, 'Where to save the resulting file to.')
+tf.app.flags.DEFINE_integer('possible_classes', None, 'Number of possible classes.')
+
+tf.app.flags.DEFINE_integer('shot', None, 'Number of support samples in each possible class')
+
+tf.app.flags.DEFINE_integer('fc_num', 0, 'The number of fully-connected layers in front of '
+                                         'match layers.')
+
+tf.app.flags.DEFINE_integer('vector_size', None, 'The shape of input feature shape.')
+
+tf.app.flags.DEFINE_integer('processing_steps', 5, 'The number of process step.')
+
+tf.app.flags.DEFINE_boolean('fce', True, 'Weather to use fully embedding')
+
+tf.app.flags.DEFINE_boolean('show_nodes', True, 'Weather to show graph nodes')
 
 FLAGS = tf.app.flags.FLAGS
 
@@ -85,7 +55,7 @@ def main(_):
     tf.logging.set_verbosity(tf.logging.INFO)
     with tf.Graph().as_default() as graph:
         features = tf.placeholder(name='input', dtype=tf.float32,
-                                  shape=[FLAGS.possible_classes * FLAGS.shot + 1, 80])
+                                  shape=[FLAGS.possible_classes * FLAGS.shot + 1, FLAGS.vector_size])
         support_labels = tf.placeholder(name='support_labels', dtype=tf.int32,
                                         shape=[FLAGS.possible_classes * FLAGS.shot, ])
 
@@ -93,18 +63,15 @@ def main(_):
         features = tf.expand_dims(features, axis=0)
         support_labels = tf.expand_dims(support_labels, axis=0)
 
-        for i in range(FLAGS.fc_num):
-            features = slim.fully_connected(features, FLAGS.vector_size,
-                                            activation_fn=tf.nn.relu, scope='fc_%d' % i)
-
-        logits, _ = matchnet.matchnet(features, support_labels, FLAGS.vector_size,
-                                      batch_size=FLAGS.batch_size,
+        logits, _ = matchnet.matchnet(features, support_labels, FLAGS.vector_size, FLAGS.fc_num,
+                                      batch_size=1,
                                       processing_steps=FLAGS.processing_steps,
                                       fce=FLAGS.fce)
 
         graph_def = graph.as_graph_def()
         with gfile.GFile(FLAGS.output_file, 'wb') as f:
             f.write(graph_def.SerializeToString())
+        print(graph_def)
 
 
 if __name__ == '__main__':

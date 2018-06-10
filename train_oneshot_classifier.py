@@ -155,9 +155,9 @@ tf.app.flags.DEFINE_float(
     'The decay to use for the moving average.'
     'If left as None, then moving averages are not used.')
 
-#######################
+#################
 # Dataset Flags #
-#######################
+#################
 
 tf.app.flags.DEFINE_string('data_source', None, 'The path of data source.')
 
@@ -434,22 +434,16 @@ def main(_):
                 """Allows data parallelism by creating multiple clones of network_fn."""
                 features, labels, slabels = batch_queue.dequeue()
 
-                end_points = {}
-                for i in range(FLAGS.fc_num):
-                    features = slim.fully_connected(features, dataset.num_classes,
-                                                    activation_fn=tf.nn.relu, scope='fc_%d' % i)
-                    end_points['fc_%d' % i] = features
-
-                with tf.device("/device:CPU:0"):
-                    logits, end_points1 = matchnet.matchnet(features, slabels, dataset.num_classes,
-                                                            batch_size=FLAGS.batch_size,
-                                                            processing_steps=FLAGS.processing_steps,
-                                                            fce=FLAGS.fce)
+                logits, end_points = matchnet.matchnet(features, slabels, dataset.num_classes,
+                                                       FLAGS.fc_num,
+                                                       batch_size=FLAGS.batch_size,
+                                                       processing_steps=FLAGS.processing_steps,
+                                                       fce=FLAGS.fce)
 
                 slim.losses.softmax_cross_entropy(
                     logits, labels, label_smoothing=FLAGS.label_smoothing, weights=1.0)
 
-                return dict(end_points, **end_points1)
+                return end_points
 
             # Gather initial summaries.
             summaries = set(tf.get_collection(tf.GraphKeys.SUMMARIES))

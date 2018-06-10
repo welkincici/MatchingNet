@@ -58,13 +58,13 @@ tf.app.flags.DEFINE_string('data_source', None, 'The path of data source.')
 
 tf.app.flags.DEFINE_string(
     'checkpoint_path', None,
-    'The path to a checkpoint from which to fine-tune.')
+    'The path to a checkpoint from which to eval.')
 
 tf.app.flags.DEFINE_integer('processing_steps', 5, 'The number of process step.')
 
 tf.app.flags.DEFINE_boolean('fce', True, 'Weather to use fully embedding')
 
-tf.app.flags.DEFINE_integer('vector_size', 1024, 'The shape of input feature shape.')
+tf.app.flags.DEFINE_integer('vector_size', None, 'The shape of input feature shape.')
 
 tf.app.flags.DEFINE_integer('fc_num', 0, 'The number of fully-connected layers in front of '
                                          'match layers.')
@@ -123,11 +123,7 @@ def main(_):
             num_threads=FLAGS.num_preprocessing_threads,
             capacity=5 * FLAGS.batch_size)
 
-        for i in range(FLAGS.fc_num):
-            features = slim.fully_connected(features, dataset.num_classes,
-                                            activation_fn=tf.nn.relu, scope='fc_%d' % i)
-
-        logits, _ = matchnet.matchnet(features, slabels, dataset.num_classes,
+        logits, _ = matchnet.matchnet(features, slabels, dataset.num_classes, FLAGS.fc_num,
                                       batch_size=FLAGS.batch_size,
                                       processing_steps=FLAGS.processing_steps, fce=FLAGS.fce)
 
