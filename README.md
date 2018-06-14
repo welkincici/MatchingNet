@@ -4,10 +4,23 @@ Matching Net model used for oneshot classification. This model is trained and ev
 Code is built under tensorflow slim framework. And use part of codes in repository https://github.com/tensorflow/models/tree/master/research/slim.   
 Special thanks to https://github.com/zergylord and https://github.com/markdtw/matching-networks. I learned a lot in these implemetation.   
 ## Environment   
-Windows   
+Windows 10   
 Python 3  
-Tensorflow r1.1.0
+Tensorflow r1.1.0   
+opencv 3.3.1   
 ## Prepare Datasets   
+### Folder Structure
+    - MatchingNet   
+      - data   
+        - ${DATASET_NAME}   
+          - train   
+            images for train
+          - val   
+            images for validation
+      ... other files and directories
+### Commands   
+For raw images are too big to feed into memory directly, I encode raw images into small vectors using trained CNN. You can following commands from MatchingNet directory to encode images into vectors and generate oneshot samples automatically. A `.tfrecord` file and a `.npz` file will appear in `data/mini_imagenet/train`. The `.tfreord` file contains oneshot samples and the `.npz` file contains encoded images.    
+
     python generate_oneshot_data.py ^
         --dataset_dir=data/mini_imagenet/train ^
         --possible_classes=10 ^
@@ -16,9 +29,20 @@ Tensorflow r1.1.0
         --from_raw_images=False ^
         --checkpoint_path=model/frozen_mobilenet_v1_224_prediction.pb ^
         --output_node=MobilenetV1/Logits/SpatialSqueeze ^
-        --batch_size=10 ^
-        --device=CPU ^
-        --save_encoded_images=True    
+        --batch_size=50 ^
+        --device=GPU ^``
+        --save_encoded_images=True 
+   
+#### Flag meaning     
+`--dataset_dir` A directory contains raw images or a `.npz` file containing encoded images. If is a `.npz` file, the encoding process will not be carried out. Instead, oneshot samples will be generated using vectors stored in the `.npz` file.     
+`--possible_classes` Number of classes to classify.   
+`--shot` Number of samples in one support class.   
+`--from_raw_images` Weather use CNN to encode images. If is True, images will not be encoded.   
+`--checkpoint_path` Path of a frozen graph.   
+`--output_node` A node of the frozen graph from which you want to get the output.   
+`--batch_size` Number of images encoded at one run. It depends on your computer, if you use CPU to encode images, this number is better set smaller.   
+`--device` Use CPU or GPU to run the encoding process.   
+`--save_encoded_images` Weather to create `.npz` file containing encoded images. You can reuse the `.npz` file to generate new oneshot samples without encoding images repeatedly.   
 ## Train Matching Net   
     python train_oneshot_classifier.py ^
         --train_dir=model/oneshot_test1 ^
