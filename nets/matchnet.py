@@ -30,8 +30,8 @@ def matchnet(inputs,
 
         if fce:
             with tf.variable_scope('G_embedding'):
-                fw_cell = tf.contrib.rnn.LSTMCell(num_classes / 2, initializer=tf.orthogonal_initializer())
-                bw_cell = tf.contrib.rnn.LSTMCell(num_classes / 2, initializer=tf.orthogonal_initializer())
+                fw_cell = tf.contrib.rnn.LayerNormBasicLSTMCell(num_classes / 2)
+                bw_cell = tf.contrib.rnn.LayerNormBasicLSTMCell(num_classes / 2)
                 # fw_cell = tf.contrib.rnn.DropoutWrapper(cell=fw_cell, input_keep_prob=1.0, output_keep_prob=0.8)
                 # bw_cell = tf.contrib.rnn.DropoutWrapper(cell=bw_cell, input_keep_prob=1.0, output_keep_prob=0.8)
 
@@ -42,7 +42,7 @@ def matchnet(inputs,
                 g_embedding = tf.add(tf.stack(support_features), tf.stack(outputs))
 
             with tf.variable_scope('F_embedding'):
-                cell = tf.contrib.rnn.LSTMCell(num_classes, initializer=tf.orthogonal_initializer())
+                cell = tf.contrib.rnn.LayerNormBasicLSTMCell(num_classes)
                 # cell = tf.contrib.rnn.DropoutWrapper(cell=cell, input_keep_prob=1.0, output_keep_prob=0.8)
 
                 state = cell.zero_state(batch_size, tf.float32)
