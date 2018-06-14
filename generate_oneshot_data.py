@@ -67,9 +67,13 @@ def main(_):
                                                              FLAGS.samples)
     else:
         encoded_images = np.load(FLAGS.dataset_dir)
+        save_info = FLAGS.dataset_dir.split('/')
+        dataset_dir = '/'.join(save_info[:-1])
+        node_abbr = save_info[-1].split('.')[0]
+        node_abbr = node_abbr.split('_')[-1]
         features = encoded_images["features"]
         labels = encoded_images["labels"]
-        save_name = "%s/oneshot_%s_%d_%d_%d.tfrecord" % (FLAGS.dataset_dir, FLAGS.output_node,
+        save_name = "%s/oneshot_%s_%d_%d_%d.tfrecord" % (dataset_dir, node_abbr,
                                                          FLAGS.possible_classes, FLAGS.shot,
                                                          FLAGS.samples)
 

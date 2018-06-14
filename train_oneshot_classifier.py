@@ -415,6 +415,12 @@ def main(_):
             feature = tf.reshape(feature, [samples, dataset.num_classes])
             label = receive_list[samples]
             slabel = tf.stack(receive_list[samples + 1:], axis=0)
+
+            # with tf.Session() as sess:
+            #     tf.train.start_queue_runners()
+            #     for i in range(10):
+            #         print(sess.run([label, slabel]))
+
             label = slim.one_hot_encoding(label, possible_classes)
             slabel = slim.one_hot_encoding(slabel, possible_classes)
 
@@ -427,9 +433,9 @@ def main(_):
             batch_queue = slim.prefetch_queue.prefetch_queue(
                 [features, labels, slabels], capacity=2 * deploy_config.num_clones)
 
-            # ####################
-            # # Define the model #
-            # ####################
+            ####################
+            # Define the model #
+            ####################
             def clone_fn(batch_queue):
                 """Allows data parallelism by creating multiple clones of network_fn."""
                 features, labels, slabels = batch_queue.dequeue()

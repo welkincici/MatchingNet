@@ -78,7 +78,7 @@ def oneshot_data_gen(features, labels, samples, possible_classes, shot):
         oneshot_label = np.array(oneshot_label)
 
         rand_index = np.arange(1, shot * possible_classes + 1)
-        np.random.shuffle(np.arange(1, shot * possible_classes + 1))
+        np.random.shuffle(rand_index)
 
         oneshot_feature[1:] = oneshot_feature[rand_index]
         oneshot_label[1:] = oneshot_label[rand_index]
