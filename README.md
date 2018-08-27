@@ -31,7 +31,7 @@ For raw images are too big to feed into memory directly, I encode raw images int
         --checkpoint_path=model/frozen_mobilenet_v1_224_prediction.pb ^
         --output_node=MobilenetV1/Logits/SpatialSqueeze ^
         --batch_size=50 ^
-        --device=GPU ^``
+        --device=GPU ^
         --save_encoded_images=True 
    
 #### Flag meaning     
