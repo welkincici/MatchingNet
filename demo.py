@@ -19,7 +19,7 @@ tf.app.flags.DEFINE_string('encode_graph', 'model/frozen_oneshot_base.pb', 'Grap
 tf.app.flags.DEFINE_string('match_graph', 'model/oneshot_nfce10_5.pb', 'Graph used to match target '
                                                                        'vectors with support classes')
 
-tf.app.flags.DEFINE_string('support_dir', None, 'Path of support data')
+tf.app.flags.DEFINE_string('support_dir', 'support_data', 'Path of support data')
 
 FLAGS = tf.app.flags.FLAGS
 
