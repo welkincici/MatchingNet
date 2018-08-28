@@ -194,7 +194,7 @@ tf.app.flags.DEFINE_boolean(
 
 tf.app.flags.DEFINE_integer('processing_steps', 5, 'The number of process step.')
 
-tf.app.flags.DEFINE_boolean('fce', True, 'Weather to use fully embedding')
+tf.app.flags.DEFINE_boolean('fce', True, 'Weather to use fully context embedding')
 
 tf.app.flags.DEFINE_integer('vector_size', None, 'The shape of input feature shape.')
 

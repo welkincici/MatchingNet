@@ -71,7 +71,9 @@ def main(_):
         graph_def = graph.as_graph_def()
         with gfile.GFile(FLAGS.output_file, 'wb') as f:
             f.write(graph_def.SerializeToString())
-        print(graph_def)
+
+        if FLAGS.show_nodes:
+            print(graph_def)
 
 
 if __name__ == '__main__':

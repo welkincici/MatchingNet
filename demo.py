@@ -1,20 +1,32 @@
 import os
-import sys
 
 import numpy as np
 import tensorflow as tf
 import cv2
 import time
 
-_VECTOR_SIZE = 80
-_CLASSES = 10
-_SHOT = 5
-_PIC_SIZE = 224
+tf.app.flags.DEFINE_integer('vector_size', 80, 'The size of encode graph output vector')
+
+tf.app.flags.DEFINE_integer('num_classes', 10, 'Number of classes')
+
+tf.app.flags.DEFINE_integer('shot', 5, 'Number of pictures in every support classes')
+
+tf.app.flags.DEFINE_integer('pic_size', 224, 'Resized picture size')
+
+tf.app.flags.DEFINE_string('encode_graph', 'model/frozen_oneshot_base.pb', 'Graph used to encode raw pictures '
+                                                                           'in to representative vectors')
+
+tf.app.flags.DEFINE_string('match_graph', 'model/oneshot_nfce10_5.pb', 'Graph used to match target '
+                                                                       'vectors with support classes')
+
+tf.app.flags.DEFINE_string('support_dir', None, 'Path of support data')
+
+FLAGS = tf.app.flags.FLAGS
 
 encode_graph = tf.Graph()
 with encode_graph.as_default():
     encode_graph_def = tf.GraphDef()
-    with tf.gfile.GFile('model/frozen_oneshot_base2.pb', 'rb') as fid:
+    with tf.gfile.GFile(FLAGS.encode_graph, 'rb') as fid:
         encode_serialized_graph = fid.read()
         encode_graph_def.ParseFromString(encode_serialized_graph)
         tf.import_graph_def(encode_graph_def, name='')
@@ -23,7 +35,7 @@ with encode_graph.as_default():
 match_graph = tf.Graph()
 with match_graph.as_default():
     match_graph_def = tf.GraphDef()
-    with tf.gfile.GFile('model/oneshot_nfce10_5.pb', 'rb') as fid:
+    with tf.gfile.GFile(FLAGS.match_graph, 'rb') as fid:
         match_serialized_graph = fid.read()
         match_graph_def.ParseFromString(match_serialized_graph)
         tf.import_graph_def(match_graph_def, name='')
@@ -31,28 +43,29 @@ with match_graph.as_default():
 sess_encode = tf.Session(graph=encode_graph)
 sess_match = tf.Session(graph=match_graph)
 
+support_set_path = "%s/support_set.npy" % FLAGS.support_dir
+label_path = "%s/labels.txt" % FLAGS.support_dir
+if os.path.exists(support_set_path) and os.path.exists(label_path):
+    support_features = list(np.load(support_set_path))
+    class_name = list(np.loadtxt(label_path, dtype=np.str))
+else:
+    support_features = list(np.random.random((FLAGS.num_classes * FLAGS.shot, FLAGS.vector_size)))
+    class_name = ["NONE"] * FLAGS.num_classes
+
+support_labels = np.reshape([[i]*FLAGS.shot for i in range(10)], -1)
+
 image = encode_graph.get_tensor_by_name('input:0')
 logits = encode_graph.get_tensor_by_name('MobilenetV1/Logits/SpatialSqueeze:0')
 base_prediction = encode_graph.get_tensor_by_name('MobilenetV1/Predictions/Reshape_1:0')
 features = match_graph.get_tensor_by_name('input:0')
 labels = match_graph.get_tensor_by_name('support_labels:0')
-match_prediction = match_graph.get_tensor_by_name('MatchNet/Squeeze_50:0')
+match_prediction = match_graph.get_tensor_by_name('MatchNet/pred:0')
 
 
 def set_text(img, text, font, size, thick):
     letter_high = int(size * 34)
     for i, txt in enumerate(text.split('\n')):
         cv2.putText(img, txt, (0, letter_high * (i + 1)), font, size, (255, 255, 255), thick)
-
-
-if os.path.exists("datasets/demo/support_set.npy") and os.path.exists("datasets/demo/labels.txt"):
-    support_features = list(np.load("datasets/demo/support_set.npy"))
-    class_name = list(np.loadtxt("datasets/demo/labels.txt", dtype=np.str))
-else:
-    support_features = list(np.random.random((_CLASSES * _SHOT, _VECTOR_SIZE)))
-    class_name = ["NONE"] * _CLASSES
-
-support_labels = np.reshape([[i]*_SHOT for i in range(10)], -1)
 
 cap = cv2.VideoCapture(0)
 cap.set(3, 640)
@@ -84,7 +97,7 @@ while cap.isOpened():
 
             encoded_target = sess_encode.run(
                 [logits], feed_dict={image: np.expand_dims(
-                    cv2.resize(frame, (_PIC_SIZE, _PIC_SIZE)), axis=0)})
+                    cv2.resize(frame, (FLAGS.pic_size, FLAGS.pic_size)), axis=0)})
             encoded_target = encoded_target[0]
 
             match_features = np.concatenate((np.array(encoded_target), np.array(support_features)))
@@ -96,7 +109,7 @@ while cap.isOpened():
             msg = ""
             for i in [-1, -2, -3]:
                 msg = msg + "%s:%f\n" % (class_name[sort_index[i]], match_prdt[sort_index[i]])
-
+            msg = msg + "Press 'c' to set a new class, 'q' to quit\n"
         elif flag == 1:
             if boardkey == -1:
                 pass
@@ -116,7 +129,7 @@ while cap.isOpened():
         elif flag == 2:
             if boardkey == ord("c"):
                 flag = 3
-            msg = "Enter c to capture %d pictures" % _SHOT
+            msg = "Enter c to capture %d pictures" % FLAGS.shot
         elif flag == 3:
             msg = "Is this picture clear?(y/n)"
             set_text(img, msg, font, 1.2, 2)
@@ -127,18 +140,18 @@ while cap.isOpened():
                     count_buffer = count_buffer + 1
                     encoded_target = sess_encode.run([logits],
                                                      feed_dict={image: np.expand_dims(
-                                                         cv2.resize(frame, (_PIC_SIZE, _PIC_SIZE)), axis=0)})
+                                                         cv2.resize(frame, (FLAGS.pic_size, FLAGS.pic_size)), axis=0)})
                     encoded_target = encoded_target[0][0]
                     support_set_buffer.append(encoded_target)
 
-                    if count_buffer == _SHOT:
+                    if count_buffer == FLAGS.shot:
                         support_features.extend(support_set_buffer)
                         class_name.append(new_label_buffer)
-                        support_features = support_features[-_SHOT * _CLASSES:]
-                        class_name = class_name[-_CLASSES:]
-                        np.save("datasets/demo/support_set.npy",
+                        support_features = support_features[-FLAGS.shot * FLAGS.num_classes:]
+                        class_name = class_name[-FLAGS.num_classes:]
+                        np.save(support_set_path,
                                 np.array(support_features))
-                        np.savetxt("datasets/demo/labels.txt", class_name, fmt="%s")
+                        np.savetxt(label_path, class_name, fmt="%s")
                         flag = 0
                     else:
                         flag = 2
@@ -149,8 +162,9 @@ while cap.isOpened():
                     flag = 2
                     break
 
-        set_text(img, msg, font, 1.2, 2)
+        set_text(img, msg, font, 1, 2)
         cv2.imshow("demo", img)
 
 
-
+if __name__ == '__main__':
+    tf.app.run()

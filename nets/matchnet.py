@@ -72,7 +72,7 @@ def matchnet(inputs,
 
         cos_sim = tf.concat(axis=1, values=cos_sim_list)
         weighting = tf.nn.softmax(cos_sim)
-        label_prob = tf.squeeze(tf.matmul(tf.expand_dims(weighting, 1), support_labels), axis=1)
+        label_prob = tf.squeeze(tf.matmul(tf.expand_dims(weighting, 1), support_labels), axis=1, name='pred')
 
         end_points['G_embedding'] = g_embedding
         end_points['F_embedding'] = f_embedding
