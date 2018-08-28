@@ -3,7 +3,20 @@
 Matching Net model used for oneshot classification. This model is trained and evaluated in mini ImageNet. Refer to https://arxiv.org/abs/1606.04080 for detailed description.    
 Code is built under tensorflow slim framework. And use part of codes in repository https://github.com/tensorflow/models/tree/master/research/slim.   
 Special thanks to https://github.com/zergylord and https://github.com/markdtw/matching-networks. I learned a lot in these implemetation. 
-## Demo  
+## Demo    
+Clone this repository and run the demo.py to try the demo!    
+You can also customize the demo to your application. Just run demo with your attributes as the following format   
+
+    python demo.py ^
+        --vector_size=80 ^
+        --num_classes=10 ^
+        --shot=5 ^
+        --pic_size=224 ^
+        --encode_graph=model/frozen_oneshot_base.pb ^
+        --match_graph=model/oneshot_nfce10_5.pb ^
+        --support_dir=support_data 
+   
+   
 ## Environment   
 Windows 10   
 Python 3  
